@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2D Multiplayer Game</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f0f0f0;
+      }
+      canvas {
+        border: 1px solid #000;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js"></script>
+    <script>
+      class GameClient {
+        constructor(instanceId) {
+          this.canvas = document.createElement('canvas');
+          this.canvas.width = 800;
+          this.canvas.height = 600;
+          document.body.appendChild(this.canvas);
+          this.ctx = this.canvas.getContext('2d');
+
+          this.socket = io('http://127.0.0.1:3000', {
+            query: { instanceId },
+            withCredentials: true,
+          });
+
+          this.gameObjects = [];
+          this.player = null;
+
+          this.setupSocketListeners();
+          this.setupEventListeners();
+          this.animate();
+
+          this.mouseX = 0;
+          this.mouseY = 0;
+        }
+
+        drawLine(mouseX, mouseY) {
+          if (!this.player) {
+            return;
+          }
+
+          const playerPosition = this.player.position;
+
+          //this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+          this.ctx.beginPath();
+          this.ctx.moveTo(playerPosition.x, playerPosition.y);
+          this.ctx.lineTo(mouseX, mouseY);
+          this.ctx.strokeStyle = 'yellow';
+          this.ctx.lineWidth = 2;
+          this.ctx.lineDashOffset = 5;
+          this.ctx.setLineDash([5, 15]);
+          this.ctx.stroke();
+        }
+
+        setupSocketListeners() {
+          this.socket.on('gameState', (gameObjects) => {
+            this.gameObjects = gameObjects;
+            for (const at of this.gameObjects) {
+              if (at.socketId == this.socket.id) {
+                this.player = at;
+              }
+            }
+          });
+        }
+
+        setupEventListeners() {
+          this.canvas.addEventListener('click', (event) => {
+            if (!this.player) {
+              return;
+            }
+            const rect = this.canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left - this.canvas.width / 2;
+            const y = event.clientY - rect.top - this.canvas.height / 2;
+
+            const playerPosition = this.player.position;
+            if (playerPosition) {
+              const dx = x - playerPosition.x;
+              const dy = y - playerPosition.y;
+              const length = Math.sqrt(dx * dx + dy * dy);
+              const direction = { x: dx / length, y: dy / length };
+
+              this.socket.emit('shoot', direction);
+            }
+          });
+
+          this.canvas.addEventListener('mousemove', (event) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const ax = event.clientX - rect.left;
+            const ay = event.clientY - rect.top;
+
+            this.mouseX = ax - rect.width / 2;
+            this.mouseY = ay - rect.height / 2;
+          });
+        }
+
+        animate() {
+          requestAnimationFrame(() => this.animate());
+          //this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          this.ctx.fillStyle = 'black';
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+          this.ctx.save();
+          this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+
+          for (const obj of this.gameObjects) {
+            switch (obj.type) {
+              case 'player':
+                this.ctx.fillStyle = 'blue';
+                this.ctx.beginPath();
+                this.ctx.arc(
+                  obj.position.x,
+                  obj.position.y,
+                  10,
+                  0,
+                  Math.PI * 2,
+                );
+                this.ctx.fill();
+                break;
+              case 'enemy':
+                this.ctx.fillStyle = 'red';
+                this.ctx.beginPath();
+                this.ctx.arc(
+                  obj.position.x,
+                  obj.position.y,
+                  10,
+                  0,
+                  Math.PI * 2,
+                );
+                this.ctx.fill();
+                break;
+              case 'bullet':
+                this.ctx.fillStyle = 'white';
+                this.ctx.beginPath();
+                this.ctx.arc(obj.position.x, obj.position.y, 5, 0, Math.PI * 2);
+                this.ctx.fill();
+                break;
+            }
+          }
+          this.drawLine(this.mouseX, this.mouseY);
+          this.ctx.restore();
+        }
+      }
+
+      // Start the game when the page loads
+      window.onload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const instanceId = urlParams.get('instance') || 'default';
+        new GameClient(instanceId);
+      };
+    </script>
+  </body>
+</html>
+<style>
+  body {
+    background-color: #000000;
+  }
+
+  canvas {
+    border: 1px solid #004d0d;
+  }
+</style>
