@@ -7,7 +7,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GameInstanceManagerService } from './game-instance-manager/game-instance-manager.service';
-import { PHYSIC_FPS } from './settings';
+import { CLEAR_INSTANCE_TIMEOUT, PHYSIC_FPS } from './settings';
 
 @WebSocketGateway()
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -36,7 +36,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (gameInstance.playerCount === 0) {
           this.gameInstanceManager.removeInstance(instanceId);
         }
-      }, 5000);
+      }, CLEAR_INSTANCE_TIMEOUT);
     }
     client.leave(instanceId);
   }
@@ -52,7 +52,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   afterInit(server: Server) {
-    setInterval(() => this.updateAndBroadcastGameState(), 1000 / 60);
+    setInterval(() => this.updateAndBroadcastGameState(), 1000 / PHYSIC_FPS);
   }
 
   private updateAndBroadcastGameState() {

@@ -13,3 +13,5 @@ export const WALLTOP = GAME_HEIGHT / 2;
 export const WALLBOTTOM = -(GAME_HEIGHT / 2);
 
 export const PHYSIC_FPS = 30;
+
+export const CLEAR_INSTANCE_TIMEOUT = 15000;

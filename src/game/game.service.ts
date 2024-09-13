@@ -309,7 +309,7 @@ export class GameService {
       this.physicsWorld.removeRigidBody(enemy.body);
       this.gameObjects.delete(enemy.id);
 
-      //   this.spawnEnemy();
+      this.spawnEnemy();
     }
   }
 
